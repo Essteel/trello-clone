@@ -1,5 +1,6 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
 
 from datetime import date
 
@@ -8,6 +9,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://trello_dev:password123@127.0.0.1:5432/trello'
 
 db = SQLAlchemy(app)
+ma = Marshmallow(app)
 
 class Card(db.Model):
     __tablename__ = 'cards'
@@ -17,6 +19,10 @@ class Card(db.Model):
     date = db.Column(db.Date)
     status = db.Column(db.String)
     priority = db.Column(db.String)
+
+class CardSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'title', 'description', 'status', 'priority', 'date')
 
 # Define a custom CLI (terminal) command
 @app.cli.command('create')
@@ -80,13 +86,14 @@ def seed_db():
 #     print(card.__dict__)
 
 # New way - SQLAlchemy 2.x
-@app.cli.command('all_cards')
+@app.route('/cards/')
 def all_cards():
     # select * from cards
     stmt = db.select(Card).order_by(Card.priority.desc(), Card.title)
     cards = db.session.scalars(stmt)
-    for card in cards:
-        print(card.title, card.priority)
+    return jsonify(cards)
+    # for card in cards:
+    #     print(card.title, card.priority)
 
 @app.cli.command('first_card')
 def first_card():
