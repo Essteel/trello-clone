@@ -83,8 +83,22 @@ def seed_db():
 @app.cli.command('all_cards')
 def all_cards():
     # select * from cards
-    stmt = db.select(Card)
-    cards = db.session.scalars(stmt).all()
+    stmt = db.select(Card).order_by(Card.priority.desc(), Card.title)
+    cards = db.session.scalars(stmt)
+    for card in cards:
+        print(card.title, card.priority)
+
+@app.cli.command('first_card')
+def first_card():
+    #select * from cards limit 1;
+    stmt = db.select(Card).limit(1)
+    card = db.session.scalar(stmt)
+    print(card.__dict__)
+
+@app.cli.command('count_ongoing')
+def count_ongoing():
+    stmt = db.select(db.func.count()).select_from(Card).filter_by(status='Ongoing')
+    cards = db.session.scalar(stmt)
     print(cards)
 
 @app.route('/')
