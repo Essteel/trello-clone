@@ -66,6 +66,27 @@ def seed_db():
         db.session.commit()
         print('Tables seeded')
 
+# Old way LEGACY
+# @app.cli.command('all_cards')
+# def all_cards():
+#     # select * from cards;
+#     cards = Card.query.all()
+#     print(cards[0].__dict__)
+
+# @app.cli.command('first_card')
+# def first_cards():
+#     # select * from cards limit 1;
+#     card = Card.query.first()
+#     print(card.__dict__)
+
+# New way - SQLAlchemy 2.x
+@app.cli.command('all_cards')
+def all_cards():
+    # select * from cards
+    stmt = db.select(Card)
+    cards = db.session.scalars(stmt).all()
+    print(cards)
+
 @app.route('/')
 def index():
     return "Hello, world!"
