@@ -5,6 +5,7 @@ from flask_marshmallow import Marshmallow
 from datetime import date
 
 app = Flask(__name__)
+app.config['JSON_SORT_KEYS'] = False
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://trello_dev:password123@127.0.0.1:5432/trello'
 
@@ -23,6 +24,7 @@ class Card(db.Model):
 class CardSchema(ma.Schema):
     class Meta:
         fields = ('id', 'title', 'description', 'status', 'priority', 'date')
+        ordered = True
 
 # Define a custom CLI (terminal) command
 @app.cli.command('create')
@@ -91,7 +93,7 @@ def all_cards():
     # select * from cards
     stmt = db.select(Card).order_by(Card.priority.desc(), Card.title)
     cards = db.session.scalars(stmt)
-    return jsonify(cards)
+    return CardSchema(many=True).dump(cards)
     # for card in cards:
     #     print(card.title, card.priority)
 
@@ -99,7 +101,7 @@ def all_cards():
 def first_card():
     #select * from cards limit 1;
     stmt = db.select(Card).limit(1)
-    card = db.session.scalar(stmt)
+    card = db.session.scalar(stmt).all()
     print(card.__dict__)
 
 @app.cli.command('count_ongoing')
