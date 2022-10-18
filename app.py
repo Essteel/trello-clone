@@ -1,6 +1,8 @@
+import bcrypt
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
+from flask_bcrypt import Bcrypt
 
 from datetime import date
 
@@ -11,6 +13,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://trello_dev:passwo
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
+bcrypt = Bcrypt(app)
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -55,13 +58,13 @@ def seed_db():
     users = [
         User(
             email = 'admin@spam.com',
-            password = 'eggs',
+            password = bcrypt.generate_password_hash('eggs'),
             is_admin = True
-        )
+        ),
         User(
             name = 'John Cleese',
             email = 'someone@spam.com',
-            password = '12345'
+            password = bcrypt.generate_password_hash('12345')
         )
     ]
     cards = [
