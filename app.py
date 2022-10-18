@@ -19,7 +19,11 @@ class User(db.Model):
     name = db.Column(db.String)
     email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
-    admin = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False)
+
+class UserSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'name', 'email', 'is_admin')
 
 class Card(db.Model):
     __tablename__ = 'cards'
@@ -48,6 +52,18 @@ def drop_db():
 
 @app.cli.command('seed')
 def seed_db():
+    users = [
+        User(
+            email = 'admin@spam.com',
+            password = 'eggs',
+            is_admin = True
+        )
+        User(
+            name = 'John Cleese',
+            email = 'someone@spam.com',
+            password = '12345'
+        )
+    ]
     cards = [
         Card(
             title = 'Start the project',
@@ -80,6 +96,7 @@ def seed_db():
     ]
 
     db.session.add_all(cards)
+    db.session.add_all(users)
     db.session.commit()
     print('Tables seeded')
 
