@@ -1,5 +1,5 @@
 import bcrypt
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_bcrypt import Bcrypt
@@ -26,7 +26,8 @@ class User(db.Model):
 
 class UserSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'name', 'email', 'is_admin')
+        fields = ('id', 'name', 'email', 'password', 'is_admin')
+        load_only = ('password')
 
 class Card(db.Model):
     __tablename__ = 'cards'
@@ -58,13 +59,13 @@ def seed_db():
     users = [
         User(
             email = 'admin@spam.com',
-            password = bcrypt.generate_password_hash('eggs'),
+            password = bcrypt.generate_password_hash('eggs').decode('utf-8'),
             is_admin = True
         ),
         User(
             name = 'John Cleese',
             email = 'someone@spam.com',
-            password = bcrypt.generate_password_hash('12345')
+            password = bcrypt.generate_password_hash('12345').decode('utf-8')
         )
     ]
     cards = [
@@ -115,6 +116,22 @@ def seed_db():
 #     # select * from cards limit 1;
 #     card = Card.query.first()
 #     print(card.__dict__)
+
+@app.route('/auth/register/', methods = ['POST'])
+def auth_register():
+    # Load the posted user info and parse the JSON
+    user_info = UserSchema().load(request.json)
+    # Create a new User model instance from the user_info
+    user = User(
+        email = user_info['email'],
+        password = bcrypt.generate_password_hash(user_info['password']).decode('utf-8'),
+        name = user_info['name']
+    )
+
+    # Add and commit user to the database
+    db.session.add(user)
+    db.session.commit()
+    return UserSchema().dump(user), 201
 
 # New way - SQLAlchemy 2.x
 @app.route('/cards/')
