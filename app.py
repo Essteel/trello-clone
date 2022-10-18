@@ -1,6 +1,7 @@
 import bcrypt
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 from flask_marshmallow import Marshmallow
 from flask_bcrypt import Bcrypt
 
@@ -27,7 +28,6 @@ class User(db.Model):
 class UserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'name', 'email', 'password', 'is_admin')
-        load_only = ('password')
 
 class Card(db.Model):
     __tablename__ = 'cards'
@@ -119,19 +119,22 @@ def seed_db():
 
 @app.route('/auth/register/', methods = ['POST'])
 def auth_register():
-    # Load the posted user info and parse the JSON
-    user_info = UserSchema().load(request.json)
-    # Create a new User model instance from the user_info
-    user = User(
-        email = user_info['email'],
-        password = bcrypt.generate_password_hash(user_info['password']).decode('utf-8'),
-        name = user_info['name']
-    )
+    try:
+        # Load the posted user info and parse the JSON
+        user_info = UserSchema().load(request.json)
+        # Create a new User model instance from the user_info
+        user = User(
+            email = user_info['email'],
+            password = bcrypt.generate_password_hash(user_info['password']).decode('utf-8'),
+            name = user_info['name']
+        )
 
-    # Add and commit user to the database
-    db.session.add(user)
-    db.session.commit()
-    return UserSchema().dump(user), 201
+        # Add and commit user to the database
+        db.session.add(user)
+        db.session.commit()
+        return UserSchema(exclude=['password']).dump(user), 201
+    except IntegrityError:
+        return {'error' : 'Email address already in use'}, 409
 
 # New way - SQLAlchemy 2.x
 @app.route('/cards/')
