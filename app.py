@@ -117,18 +117,16 @@ def seed_db():
 #     card = Card.query.first()
 #     print(card.__dict__)
 
+# New way - SQLAlchemy 2.x
 @app.route('/auth/register/', methods = ['POST'])
 def auth_register():
     try:
-        # Load the posted user info and parse the JSON
-        user_info = UserSchema().load(request.json)
-        # Create a new User model instance from the user_info
+        # Create a new User model instance
         user = User(
-            email = user_info['email'],
-            password = bcrypt.generate_password_hash(user_info['password']).decode('utf-8'),
-            name = user_info['name']
+            email = request.json['email'],
+            password = bcrypt.generate_password_hash(request.json['password']).decode('utf-8'),
+            name = request.json['name']
         )
-
         # Add and commit user to the database
         db.session.add(user)
         db.session.commit()
@@ -136,7 +134,12 @@ def auth_register():
     except IntegrityError:
         return {'error' : 'Email address already in use'}, 409
 
-# New way - SQLAlchemy 2.x
+@app.route('/auth/login/', methods = ['POST'])
+def auth_login():
+    stmt = db.select(User).filter_by(email=request.json['email'], password=bcrypt.generate_password_hash(request.json['password']).decode('utf-8'))
+    user = db.session.scalar(stmt)
+    return UserSchema(exclude=['password']).dump(user)
+
 @app.route('/cards/')
 def all_cards():
     # select * from cards
