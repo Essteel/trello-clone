@@ -4,17 +4,20 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from flask_marshmallow import Marshmallow
 from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 
-from datetime import date
+from datetime import date, timedelta
 
 app = Flask(__name__)
-app.config['JSON_SORT_KEYS'] = False
 
+app.config['JSON_SORT_KEYS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://trello_dev:password123@127.0.0.1:5432/trello'
+app.config['JWT_SECRET_KEY'] = 'hello there'
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -136,11 +139,20 @@ def auth_register():
 
 @app.route('/auth/login/', methods = ['POST'])
 def auth_login():
-    stmt = db.select(User).filter_by(email=request.json['email'], password=bcrypt.generate_password_hash(request.json['password']).decode('utf-8'))
+    # Get user by email address
+    # stmt = db.select(User).where(User.email == request.json['email']) # how to do with Where
+    stmt = db.select(User).filter_by(email=request.json['email'])
     user = db.session.scalar(stmt)
-    return UserSchema(exclude=['password']).dump(user)
+    # If user is valid check password, if also true return user, no password
+    if user and bcrypt.check_password_hash(user.password, request.json['password']):
+        # return UserSchema(exclude=['password']).dump(user)
+        token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=1))
+        return {'email': user.email, 'token' : token, 'is_admin' : user.is_admin}
+    else:
+        return {'error' : 'Invalid email or password'}, 401
 
 @app.route('/cards/')
+@jwt_required()
 def all_cards():
     # select * from cards
     stmt = db.select(Card).order_by(Card.priority.desc(), Card.title)
