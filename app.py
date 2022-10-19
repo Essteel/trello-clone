@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from flask_marshmallow import Marshmallow
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
 from datetime import date, timedelta
 
@@ -154,12 +154,17 @@ def auth_login():
 @app.route('/cards/')
 @jwt_required()
 def all_cards():
+    user_id = get_jwt_identity() # get user from token
+    stmt = db.select(User).filter_by(id=user_id) # query to db to get user with that id
+    user = db.session.scalar(stmt) # set user
+    if not user.is_admin:
+        return {'error' : 'You must be an admin'}, 401
     # select * from cards
     stmt = db.select(Card).order_by(Card.priority.desc(), Card.title)
     cards = db.session.scalars(stmt)
     return CardSchema(many=True).dump(cards)
     # for card in cards:
-    #     print(card.title, card.priority)
+    #       print(card.title, card.priority)
 
 @app.cli.command('first_card')
 def first_card():
